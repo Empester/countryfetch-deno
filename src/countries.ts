@@ -116,7 +116,7 @@ export class Countries {
       subregion: country.subregion,
       capitalLatLng: country.capitalInfo?.latlng?.join("/") ?? "N/A",
       timezones: country.timezones.join(" | "),
-      tld: country.tld.join(" | "),
+      tld: country.tld?.join(" | ") ?? "N/A",
       currencies,
       languages,
     });
