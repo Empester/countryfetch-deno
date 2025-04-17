@@ -36,6 +36,11 @@ export class Countries {
 
       // Fetch and parse countries data from API
       const response = await fetch(environment.baseUrl + this.query);
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`API Error: ${text}`);
+      }
+      
       const countries = (await response.json()) as Country[];
 
       this.list = countries;
