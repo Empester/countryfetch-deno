@@ -40,7 +40,7 @@ export class Countries {
         const text = await response.text();
         throw new Error(`API Error: ${text}`);
       }
-      
+
       const countries = (await response.json()) as Country[];
 
       this.list = countries;
@@ -103,7 +103,10 @@ export class Countries {
     );
 
     if (FlagAscii) {
-      this.logger.log(FlagAscii.flagString[0]);
+      // Display ASCII flag
+      this.logger.log("\n" + FlagAscii.flagString.join("\n"));
+    } else {
+      this.logger.error("Flag not found for " + country.name.common);
     }
 
     // Handle optional fields with checks or defaults
@@ -111,7 +114,7 @@ export class Countries {
       country: country.name.common,
       latlng: country.latlng?.join("/") ?? "N/A",  // Ensure latlng exists
       capital: country.capital?.[0] ?? "N/A",     // Capital could be an array
-      flag: country.flag ?? "N/A",                // Handle undefined flag
+      flag: "Flag: " + (FlagAscii ? "Displayed" : "Not Available"), // Add flag status
       population: country.population?.toLocaleString() ?? "N/A", // Ensure population exists
       region: country.region ?? "N/A",            // Default if region is missing
       subregion: country.subregion ?? "N/A",      // Default if subregion is missing
@@ -165,7 +168,7 @@ export class Countries {
     const result = [];
     for (const currencyAbbr in currencies) {
       const currency = currencies[currencyAbbr];
-      result.push(`${currency.name} [${currency.symbol}](${currencyAbbr})`);
+      result.push(`${currency.name} (${currencyAbbr})`);
     }
     return result.join(" | ");
   }
@@ -180,6 +183,7 @@ export class Countries {
 
   private async generateFlagImgs(
     countries: Country[],
+
     logTitle?: string
   ): Promise<FlagAscii[]> {
     const data = [];
