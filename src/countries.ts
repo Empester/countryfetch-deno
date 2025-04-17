@@ -114,7 +114,7 @@ export class Countries {
       population: country.population.toLocaleString(),
       region: country.region,
       subregion: country.subregion,
-      capitalLatLng: country.capitalInfo.latlng.join("/"),
+      capitalLatLng: country.capitalInfo?.latlng?.join("/") ?? "N/A",
       timezones: country.timezones.join(" | "),
       tld: country.tld.join(" | "),
       currencies,
