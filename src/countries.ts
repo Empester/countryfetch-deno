@@ -102,14 +102,15 @@ export class Countries {
       (i) => i.countryName === country.name.common
     );
 
+    // If flag exists, display it above the country info
     if (FlagAscii) {
-      // Display ASCII flag
+      // Display ASCII flag above the country details
       this.logger.log("\n" + FlagAscii.flagString.join("\n"));
     } else {
       this.logger.error("Flag not found for " + country.name.common);
     }
 
-    // Handle optional fields with checks or defaults
+    // Display country details after flag
     this.logger.logCountry({
       country: country.name.common,
       latlng: country.latlng?.join("/") ?? "N/A",  // Ensure latlng exists
