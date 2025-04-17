@@ -106,17 +106,18 @@ export class Countries {
       this.logger.log(FlagAscii.flagString[0]);
     }
 
+    // Handle optional fields with checks or defaults
     this.logger.logCountry({
       country: country.name.common,
-      latlng: country.latlng.join("/"),
-      capital: country.capital[0],
-      flag: country.flag,
-      population: country.population.toLocaleString(),
-      region: country.region,
-      subregion: country.subregion,
-      capitalLatLng: country.capitalInfo?.latlng?.join("/") ?? "N/A",
-      timezones: country.timezones.join(" | "),
-      tld: country.tld?.join(" | ") ?? "N/A",
+      latlng: country.latlng?.join("/") ?? "N/A",  // Ensure latlng exists
+      capital: country.capital?.[0] ?? "N/A",     // Capital could be an array
+      flag: country.flag ?? "N/A",                // Handle undefined flag
+      population: country.population?.toLocaleString() ?? "N/A", // Ensure population exists
+      region: country.region ?? "N/A",            // Default if region is missing
+      subregion: country.subregion ?? "N/A",      // Default if subregion is missing
+      capitalLatLng: country.capitalInfo?.latlng?.join("/") ?? "N/A", // Safely access capital latlng
+      timezones: country.timezones?.join(" | ") ?? "N/A", // Handle missing timezones
+      tld: country.tld?.join(" | ") ?? "N/A",         // Safely access tld
       currencies,
       languages,
     });
