@@ -9,6 +9,7 @@ import { FlagAscii } from "./models/flag-ascii.model.ts";
 import { Cache } from "./util/cache.ts";
 import { Logger } from "./util/logger.ts";
 import { ImageConverter } from "./util/image-converter.ts";
+import flagUrls from "./flags.json" with { type: "json" };
 
 export class Countries {
   list: Country[] = [];
@@ -34,12 +35,8 @@ export class Countries {
           : `\nThis will only happen every ${environment.syncInterval} days`
       );
 
+      // Fetch and parse countries data from API
       const response = await fetch(environment.baseUrl + this.query);
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`API Error: ${text}`);
-      }
-
       const countries = (await response.json()) as Country[];
 
       this.list = countries;
@@ -68,13 +65,17 @@ export class Countries {
   public find(name: string): Country {
     name = name.toLowerCase();
 
+    // Find exact match first
     let country = this.list.find((c) => {
-      return c.name.common.toLowerCase() === name;
+      const countryName = c.name.common.toLowerCase();
+      return countryName === name;
     });
 
+    // Find fuzzy match if exact was not found
     if (!country) {
       country = this.list.find((c) => {
-        return c.name.common.toLowerCase().includes(name);
+        const countryName = c.name.common.toLowerCase();
+        return countryName.includes(name);
       });
     }
 
@@ -93,31 +94,36 @@ export class Countries {
     const country = this.find(name);
     const currencies = this.extractCurrencies(country.currencies);
     const languages = this.extractLanguages(country.languages);
-    const flagUrl = `https://flagcdn.com/${country.cca2.toLowerCase()}.svg`;
+    const flagAscii = this.flags.find((i) => i.countryName === country.name.common);
 
-    const separatorLength = environment.flagWidth;
-    const separator = "-".repeat(separatorLength);
+    if (flagAscii) {
+      this.logger.log(flagAscii.flagString[0]);
+    }
 
-    this.logger.log("\n" + separator);
-
-    this.logger.log(`Flag for ${country.name.common}: ${flagUrl}`);
-    this.logger.log("Flag displayed below:");
-    this.logger.log("\n" + separator);
+    // Fallback for missing tld (Top-Level Domain)
+    const tld = country.tld ? country.tld.join(" | ") : "N/A";
 
     this.logger.logCountry({
       country: country.name.common,
-      latlng: country.latlng?.join("/") ?? "N/A",
-      capital: country.capital?.[0] ?? "N/A",
-      flag: flagUrl,
-      population: country.population?.toLocaleString() ?? "N/A",
-      region: country.region ?? "N/A",
-      subregion: country.subregion ?? "N/A",
-      capitalLatLng: country.capitalInfo?.latlng?.join("/") ?? "N/A",
-      timezones: country.timezones?.join(" | ") ?? "N/A",
-      tld: country.tld?.join(" | ") ?? "N/A",
-      currencies,
-      languages,
+      latlng: country.latlng.join("/"),
+      capital: country.capital[0],
+      flag: country.flag,
+      population: country.population.toLocaleString(),
+      region: country.region,
+      subregion: country.subregion,
+      // Check if capitalInfo and latlng are present before accessing them
+      capitalLatLng: country.capitalInfo && country.capitalInfo.latlng
+        ? country.capitalInfo.latlng.join("/")
+        : "N/A",
+      timezones: country.timezones.join(" | "),
+      tld: tld,
+      currencies: currencies,
+      languages: languages,
     });
+
+    // Fetch flag URL from flags.json
+    const flagUrl = flagUrls[country.name.common.toLowerCase()] || "https://flagcdn.com/unknown.svg";
+    this.logger.log(`Flag: ${flagUrl}`);
   }
 
   public random(): string {
@@ -125,10 +131,34 @@ export class Countries {
     return this.names[randomNum];
   }
 
+  public capitalOf(capital: string): void {
+    if (!capital) {
+      this.logger.error("Must provide a capital name.");
+      return;
+    }
+    const country = this.findByCapital(capital);
+    this.logger.capitalOf(capital, country.name.common);
+  }
+
+  private findByCapital(capital: string): Country {
+    const country = this.list.find((c) => {
+      const capitalsLowercase = c.capital.map((capital) =>
+        capital.toLowerCase()
+      );
+      return capitalsLowercase.includes(capital);
+    });
+
+    if (!country) {
+      throw `Could not find the country of capital: ${capital}`;
+    }
+
+    return country;
+  }
+
   private shouldSync() {
     const lastSynced = this.cache.readTxt("last-synced");
     const cacheExists = this.cache.exists("countries", ".json");
-    const week = environment.syncInterval * 7 * 24 * 60 * 60 * 1000;
+    const week = environment.syncInterval * 23 * 60 * 60 * 1000;
     const updateDue = Date.now() - Number(lastSynced) > week;
 
     return !cacheExists || !lastSynced || updateDue;
@@ -138,7 +168,7 @@ export class Countries {
     const result = [];
     for (const currencyAbbr in currencies) {
       const currency = currencies[currencyAbbr];
-      result.push(`${currency.name} (${currencyAbbr})`);
+      result.push(`${currency.name} [${currency.symbol}](${currencyAbbr})`);
     }
     return result.join(" | ");
   }
@@ -158,7 +188,8 @@ export class Countries {
     const data = [];
     let index = 0;
     for (const country of countries) {
-      const flagUrl = `https://flagcdn.com/${country.cca2.toLowerCase()}.svg`;
+      // Replace png with jpg as the library used has trouble with png
+      const flagUrl = country.flags["png"].replace(".png", ".jpg");
       const flagString = await this.imageConverter.getImageStrings(flagUrl);
       data.push({
         countryName: country.name.common,
@@ -173,3 +204,4 @@ export class Countries {
     return data;
   }
 }
+
