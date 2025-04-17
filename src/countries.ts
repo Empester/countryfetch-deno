@@ -93,29 +93,22 @@ export class Countries {
     const country = this.find(name);
     const currencies = this.extractCurrencies(country.currencies);
     const languages = this.extractLanguages(country.languages);
-    const FlagAscii = this.flags.find(
-      (i) => i.countryName === country.name.common
-    );
+    const flagUrl = `https://flagcdn.com/${country.cca2.toLowerCase()}.svg`;
 
     const separatorLength = environment.flagWidth;
     const separator = "-".repeat(separatorLength);
 
     this.logger.log("\n" + separator);
 
-    if (FlagAscii) {
-      this.logger.log("\n" + FlagAscii.flagString.join("\n"));
-    } else {
-      this.logger.error("Flag not found for " + country.name.common);
-      this.logger.log("Flag: Not Available");
-    }
-
-    this.logger.log(separator);
+    this.logger.log(`Flag for ${country.name.common}: ${flagUrl}`);
+    this.logger.log("Flag displayed below:");
+    this.logger.log("\n" + separator);
 
     this.logger.logCountry({
       country: country.name.common,
       latlng: country.latlng?.join("/") ?? "N/A",
       capital: country.capital?.[0] ?? "N/A",
-      flag: "Flag: " + (FlagAscii ? "Displayed" : "Not Available"),
+      flag: flagUrl,
       population: country.population?.toLocaleString() ?? "N/A",
       region: country.region ?? "N/A",
       subregion: country.subregion ?? "N/A",
@@ -165,10 +158,7 @@ export class Countries {
     const data = [];
     let index = 0;
     for (const country of countries) {
-      const flagUrl = country.flags?.png || country.flags?.svg || "N/A";
-      if (flagUrl === "N/A") {
-        continue;
-      }
+      const flagUrl = `https://flagcdn.com/${country.cca2.toLowerCase()}.svg`;
       const flagString = await this.imageConverter.getImageStrings(flagUrl);
       data.push({
         countryName: country.name.common,
