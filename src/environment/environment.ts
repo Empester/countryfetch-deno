@@ -7,15 +7,10 @@ if (!home) {
 }
 
 export const environment = {
-  // Backend from where the information is fetched
   baseUrl: "https://restcountries.com/v3.1/",
-  // Update cache if it has been longer than given DAYS since last sync
   syncInterval: 7,
-  // Directory where country information should be stored
   cacheDir: join(home, ".cache", "countryfetch"),
-  // Determines the size of ASCII art flag size
   flagWidth: 40,
-  // Fields that should be fetched from API
   queries:
     "all?fields=name,capital,currencies,population,flags,languages,region,subregion,timezones,latlng",
 };

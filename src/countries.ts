@@ -34,7 +34,6 @@ export class Countries {
           : `\nThis will only happen every ${environment.syncInterval} days`
       );
 
-      // Fetch and parse countries data from API
       const response = await fetch(environment.baseUrl + this.query);
       if (!response.ok) {
         const text = await response.text();
@@ -69,17 +68,13 @@ export class Countries {
   public find(name: string): Country {
     name = name.toLowerCase();
 
-    // Find exact match first
     let country = this.list.find((c) => {
-      const countryName = c.name.common.toLowerCase();
-      return countryName === name;
+      return c.name.common.toLowerCase() === name;
     });
 
-    // Find fuzzy match if exact was not found
     if (!country) {
       country = this.list.find((c) => {
-        const countryName = c.name.common.toLowerCase();
-        return countryName.includes(name);
+        return c.name.common.toLowerCase().includes(name);
       });
     }
 
@@ -102,26 +97,31 @@ export class Countries {
       (i) => i.countryName === country.name.common
     );
 
-    // If flag exists, display it above the country info
+    const separatorLength = environment.flagWidth;
+    const separator = "-".repeat(separatorLength);
+
+    this.logger.log("\n" + separator);
+
     if (FlagAscii) {
-      // Display ASCII flag above the country details
       this.logger.log("\n" + FlagAscii.flagString.join("\n"));
     } else {
       this.logger.error("Flag not found for " + country.name.common);
+      this.logger.log("Flag: Not Available");
     }
 
-    // Display country details after flag
+    this.logger.log(separator);
+
     this.logger.logCountry({
       country: country.name.common,
-      latlng: country.latlng?.join("/") ?? "N/A",  // Ensure latlng exists
-      capital: country.capital?.[0] ?? "N/A",     // Capital could be an array
-      flag: "Flag: " + (FlagAscii ? "Displayed" : "Not Available"), // Add flag status
-      population: country.population?.toLocaleString() ?? "N/A", // Ensure population exists
-      region: country.region ?? "N/A",            // Default if region is missing
-      subregion: country.subregion ?? "N/A",      // Default if subregion is missing
-      capitalLatLng: country.capitalInfo?.latlng?.join("/") ?? "N/A", // Safely access capital latlng
-      timezones: country.timezones?.join(" | ") ?? "N/A", // Handle missing timezones
-      tld: country.tld?.join(" | ") ?? "N/A",         // Safely access tld
+      latlng: country.latlng?.join("/") ?? "N/A",
+      capital: country.capital?.[0] ?? "N/A",
+      flag: "Flag: " + (FlagAscii ? "Displayed" : "Not Available"),
+      population: country.population?.toLocaleString() ?? "N/A",
+      region: country.region ?? "N/A",
+      subregion: country.subregion ?? "N/A",
+      capitalLatLng: country.capitalInfo?.latlng?.join("/") ?? "N/A",
+      timezones: country.timezones?.join(" | ") ?? "N/A",
+      tld: country.tld?.join(" | ") ?? "N/A",
       currencies,
       languages,
     });
@@ -132,34 +132,10 @@ export class Countries {
     return this.names[randomNum];
   }
 
-  public capitalOf(capital: string): void {
-    if (!capital) {
-      this.logger.error("Must provide a capital name.");
-      return;
-    }
-    const country = this.findByCapital(capital);
-    this.logger.capitalOf(capital, country.name.common);
-  }
-
-  private findByCapital(capital: string): Country {
-    const country = this.list.find((c) => {
-      const capitalsLowercase = c.capital.map((capital) =>
-        capital.toLowerCase()
-      );
-      return capitalsLowercase.includes(capital);
-    });
-
-    if (!country) {
-      throw `Could not find the country of capital: ${capital}`;
-    }
-
-    return country;
-  }
-
   private shouldSync() {
     const lastSynced = this.cache.readTxt("last-synced");
     const cacheExists = this.cache.exists("countries", ".json");
-    const week = environment.syncInterval * 23 * 60 * 60 * 1000;
+    const week = environment.syncInterval * 7 * 24 * 60 * 60 * 1000;
     const updateDue = Date.now() - Number(lastSynced) > week;
 
     return !cacheExists || !lastSynced || updateDue;
@@ -184,14 +160,15 @@ export class Countries {
 
   private async generateFlagImgs(
     countries: Country[],
-
     logTitle?: string
   ): Promise<FlagAscii[]> {
     const data = [];
     let index = 0;
     for (const country of countries) {
-      // Replace png with jpg as the library used has trouble with png
-      const flagUrl = country.flags["png"].replace(".png", ".jpg");
+      const flagUrl = country.flags?.png || country.flags?.svg || "N/A";
+      if (flagUrl === "N/A") {
+        continue;
+      }
       const flagString = await this.imageConverter.getImageStrings(flagUrl);
       data.push({
         countryName: country.name.common,
